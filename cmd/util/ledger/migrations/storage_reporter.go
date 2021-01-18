@@ -1,9 +1,6 @@
 package migrations
 
 import (
-	"math"
-	"strings"
-
 	"github.com/rs/zerolog"
 
 	"github.com/onflow/flow-go/ledger"
@@ -20,10 +17,9 @@ type StorageReporter struct {
 func (r StorageReporter) Report(payload []ledger.Payload) error {
 	r.Log.Info().Msg("Running Storage Reporter")
 	storageUsed := make(map[string]uint64)
-	average := 0.0
-	max := uint64(0)
+	isDapperAccount := make(map[string]bool)
 
-	for i, p := range payload {
+	for _, p := range payload {
 		id, err := keyToRegisterID(p.Key)
 		if err != nil {
 			return err
@@ -39,72 +35,14 @@ func (r StorageReporter) Report(payload []ledger.Payload) error {
 		if err != nil {
 			return err
 		}
-		storageUsed[id.Owner] = u
-		average = average + (float64(u)-average)/(float64(i)+1.0)
-		if u > max {
-			max = u
-		}
+		storageUsed[id.Owner] = storageUsed[id.Owner] + u
+		isDapperAccount[id.Owner] = false
 	}
-	r.Log.Info().
-		Msgf("Average storage used %g", average)
-	r.Log.Info().
-		Msgf("Max storage used %d", max)
-
-	bins := 150
-	binHeight := 30
-	w := float64(max) / float64(bins)
-	distribution := make([]float64, bins)
-
-	var maxBin = float64(0)
-
+	r.Log.Info().Msg("Storage Used")
 	for s, u := range storageUsed {
-		var i = int(float64(u) / w)
-		if i >= bins {
-			i = bins - 1
-		}
-		distribution[i] = distribution[i] + 1
-
-		if maxBin < distribution[i] {
-			maxBin = distribution[i]
-		}
-		if i == bins-1 {
-			r.Log.Info().
-				Msgf("High storage usage address: %s, used: %d bytes", flow.BytesToAddress([]byte(s)), u)
-		}
+		r.Log.Info().Msgf("%s,%u,%t", s,u, isDapperAccount[s])
 	}
-	maxBinAccounts := maxBin
-	maxBin = math.Log10(maxBin)
-
-	graph := make([]int, bins)
-
-	for i, d := range distribution {
-		var v float64
-		if d <= 0 {
-			v = 0
-		} else {
-			v = math.Log10(d)
-		}
-
-		graph[i] = int(math.Ceil((v / maxBin) * float64(binHeight)))
-	}
-
-	r.Log.Info().
-		Msgf("Logarithmic account storage distribution x[storage used] / y[log number of accounts (max = %f accounts)]:", maxBinAccounts)
-
-	var sb strings.Builder
-	for j := binHeight; j >= 0; j-- {
-		sb.WriteRune('\n')
-		for i := 0; i < bins; i++ {
-			if graph[i] >= j {
-				sb.WriteRune('#')
-			} else {
-				sb.WriteRune('.')
-			}
-		}
-	}
-
-	r.Log.Info().
-		Msg(sb.String())
+	r.Log.Info().Msg("End Of Storage Used")
 
 	return nil
 }
