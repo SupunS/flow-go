@@ -62,7 +62,7 @@ func (r StorageReporter) Report(payload []ledger.Payload) error {
 		if err != nil {
 			return err
 		}
-		record := fmt.Sprintf("%s,%d,%t\n", id.Owner, u, false)
+		record := fmt.Sprintf("%s,%d,%t\n", flow.BytesToAddress([]byte(id.Owner)).Hex(), u, false)
 		_, err = writer.WriteString(record)
 		if err != nil {
 			return err
