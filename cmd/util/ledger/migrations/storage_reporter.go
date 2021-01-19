@@ -2,6 +2,7 @@ package migrations
 
 import (
 	"bufio"
+	"encoding/hex"
 	"fmt"
 	"github.com/onflow/cadence/runtime/common"
 	"github.com/onflow/cadence/runtime/interpreter"
@@ -70,8 +71,9 @@ func (r StorageReporter) Report(payload []ledger.Payload) error {
 		if err != nil {
 			return err
 		}
-		dapper, err := isDapper(address, st)
+		dapper, err := r.isDapper(address, st)
 		if err != nil {
+			r.Log.Err(err).Msg("Cannot determine if this is a dapper account")
 			return err
 		}
 		record := fmt.Sprintf("%s,%d,%t\n", address.Hex(), u, dapper)
@@ -86,7 +88,7 @@ func (r StorageReporter) Report(payload []ledger.Payload) error {
 	return nil
 }
 
-func isDapper(address flow.Address, st *state.State) (bool, error) {
+func (r StorageReporter) isDapper(address flow.Address, st *state.State) (bool, error) {
 	id := flow.RegisterID{
 		Owner:      string(address.Bytes()),
 		Controller: "",
@@ -105,13 +107,14 @@ func isDapper(address flow.Address, st *state.State) (bool, error) {
 	commonAddress := common.BytesToAddress([]byte(id.Owner))
 	storedValue, err := interpreter.DecodeValue(storedData, &commonAddress, []string{id.Key}, version)
 	if err != nil {
-		return false, err
+		r.Log.Warn().Str("value", hex.EncodeToString(storedData)).Msg("Error decoding cadence value")
+		return true, nil
 	}
 
 	composite, ok := storedValue.(*interpreter.CompositeValue)
 	if !ok {
 		return true, nil
 	}
-	
+
 	return !strings.HasSuffix(string(composite.TypeID()), ".FungibleToken.Vault"), nil
 }
