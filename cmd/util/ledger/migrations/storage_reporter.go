@@ -35,7 +35,7 @@ func (r StorageReporter) Report(payload []ledger.Payload) error {
 		if err != nil {
 			return err
 		}
-		storageUsed[id.Owner] = storageUsed[id.Owner] + u
+		storageUsed[id.Owner] = u
 		isDapperAccount[id.Owner] = false
 	}
 	r.Log.Info().Msg("Storage Used")
