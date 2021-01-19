@@ -99,7 +99,7 @@ func (r StorageReporter) isDapper(address flow.Address, st *state.State) (bool, 
 	if err != nil {
 		return false, fmt.Errorf("could not load storage capacity resource at %s: %w", id.String(), err)
 	}
-	if resource == nil {
+	if len(resource) == 0 {
 		return true, nil
 	}
 
