@@ -3,9 +3,12 @@ package migrations
 import (
 	"bufio"
 	"fmt"
+	"github.com/onflow/cadence/runtime/common"
+	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/flow-go/fvm/state"
 	"github.com/rs/zerolog"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/onflow/flow-go/ledger"
@@ -87,13 +90,28 @@ func isDapper(address flow.Address, st *state.State) (bool, error) {
 	id := flow.RegisterID{
 		Owner:      string(address.Bytes()),
 		Controller: "",
-		Key:        fmt.Sprintf("%s\x1F%s", "public", "flowTokenReceiver"),
+		Key:        fmt.Sprintf("%s\x1F%s", "storage", "flowTokenVault"),
 	}
 
 	resource, err := st.Get(id.Owner, id.Controller, id.Key)
 	if err != nil {
 		return false, fmt.Errorf("could not load storage capacity resource at %s: %w", id.String(), err)
 	}
+	if resource == nil {
+		return true, nil
+	}
 
-	return resource == nil, nil
+	storedData, version := interpreter.StripMagic(resource)
+	commonAddress := common.BytesToAddress([]byte(id.Owner))
+	storedValue, err := interpreter.DecodeValue(storedData, &commonAddress, []string{id.Key}, version)
+	if err != nil {
+		return false, err
+	}
+
+	composite, ok := storedValue.(*interpreter.CompositeValue)
+	if !ok {
+		return true, nil
+	}
+	
+	return !strings.HasSuffix(string(composite.TypeID()), ".FungibleToken.Vault"), nil
 }
