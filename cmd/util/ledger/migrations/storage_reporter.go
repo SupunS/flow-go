@@ -87,7 +87,7 @@ func isDapper(address flow.Address, st *state.State) (bool, error) {
 	id := flow.RegisterID{
 		Owner:      string(address.Bytes()),
 		Controller: "",
-		Key:        fmt.Sprintf("%s\x1F%s", "storage", "flowTokenVault"),
+		Key:        fmt.Sprintf("%s\x1F%s", "public", "flowTokenReceiver"),
 	}
 
 	resource, err := st.Get(id.Owner, id.Controller, id.Key)
