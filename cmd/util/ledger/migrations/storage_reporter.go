@@ -62,13 +62,10 @@ func (r StorageReporter) Report(payload []ledger.Payload) error {
 		if err != nil {
 			return err
 		}
-		record := []byte(fmt.Sprintf("%s,%d,%t\n", id.Owner, u, false))
-		n, err := writer.Write(record)
+		record := fmt.Sprintf("%s,%d,%t\n", id.Owner, u, false)
+		_, err = writer.WriteString(record)
 		if err != nil {
 			return err
-		}
-		if n != len(record) {
-			return fmt.Errorf("failed to write data to %s", fn)
 		}
 	}
 
