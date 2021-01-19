@@ -1,6 +1,7 @@
 package migrations
 
 import (
+	"bufio"
 	"fmt"
 	"github.com/rs/zerolog"
 	"os"
@@ -37,6 +38,14 @@ func (r StorageReporter) Report(payload []ledger.Payload) error {
 		}
 	}()
 
+	writer := bufio.NewWriter(f)
+	defer func() {
+		err = writer.Flush()
+		if err != nil {
+			panic(err)
+		}
+	}()
+
 	for _, p := range payload {
 		id, err := keyToRegisterID(p.Key)
 		if err != nil {
@@ -53,8 +62,8 @@ func (r StorageReporter) Report(payload []ledger.Payload) error {
 		if err != nil {
 			return err
 		}
-		record := []byte(fmt.Sprintf("%s,%d,%t", id.Owner, u, false))
-		n, err := f.Write(record)
+		record := []byte(fmt.Sprintf("%s,%d,%t\n", id.Owner, u, false))
+		n, err := writer.Write(record)
 		if err != nil {
 			return err
 		}
