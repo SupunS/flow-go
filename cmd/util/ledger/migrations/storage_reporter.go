@@ -2,14 +2,10 @@ package migrations
 
 import (
 	"bufio"
-	"encoding/hex"
 	"fmt"
-	"github.com/onflow/cadence/runtime/common"
-	"github.com/onflow/cadence/runtime/interpreter"
 	"github.com/onflow/flow-go/fvm/state"
 	"github.com/rs/zerolog"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/onflow/flow-go/ledger"
@@ -99,22 +95,6 @@ func (r StorageReporter) isDapper(address flow.Address, st *state.State) (bool, 
 	if err != nil {
 		return false, fmt.Errorf("could not load storage capacity resource at %s: %w", id.String(), err)
 	}
-	if len(resource) == 0 {
-		return true, nil
-	}
 
-	storedData, version := interpreter.StripMagic(resource)
-	commonAddress := common.BytesToAddress([]byte(id.Owner))
-	storedValue, err := interpreter.DecodeValue(storedData, &commonAddress, []string{id.Key}, version)
-	if err != nil {
-		r.Log.Warn().Str("value", hex.EncodeToString(storedData)).Msg("Error decoding cadence value")
-		return true, nil
-	}
-
-	composite, ok := storedValue.(*interpreter.CompositeValue)
-	if !ok {
-		return true, nil
-	}
-
-	return !strings.HasSuffix(string(composite.TypeID()), ".FungibleToken.Vault"), nil
+	return len(resource) == 0, nil
 }
