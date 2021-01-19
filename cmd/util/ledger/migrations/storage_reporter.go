@@ -3,6 +3,7 @@ package migrations
 import (
 	"bufio"
 	"fmt"
+	"github.com/onflow/flow-go/fvm/state"
 	"github.com/rs/zerolog"
 	"os"
 	"time"
@@ -46,6 +47,9 @@ func (r StorageReporter) Report(payload []ledger.Payload) error {
 		}
 	}()
 
+	l := newLed(payload)
+	st := state.NewState(l)
+
 	for _, p := range payload {
 		id, err := keyToRegisterID(p.Key)
 		if err != nil {
@@ -58,11 +62,16 @@ func (r StorageReporter) Report(payload []ledger.Payload) error {
 		if id.Key != "storage_used" {
 			continue
 		}
+		address := flow.BytesToAddress([]byte(id.Owner))
 		u, _, err := utils.ReadUint64(p.Value)
 		if err != nil {
 			return err
 		}
-		record := fmt.Sprintf("%s,%d,%t\n", flow.BytesToAddress([]byte(id.Owner)).Hex(), u, false)
+		dapper, err := isDapper(address, st)
+		if err != nil {
+			return err
+		}
+		record := fmt.Sprintf("%s,%d,%t\n", address.Hex(), u, dapper)
 		_, err = writer.WriteString(record)
 		if err != nil {
 			return err
@@ -72,4 +81,19 @@ func (r StorageReporter) Report(payload []ledger.Payload) error {
 	r.Log.Info().Msg("Storage Reporter Done.")
 
 	return nil
+}
+
+func isDapper(address flow.Address, st *state.State) (bool, error) {
+	id := flow.RegisterID{
+		Owner:      string(address.Bytes()),
+		Controller: "",
+		Key:        fmt.Sprintf("%s\x1F%s", "storage", "flowTokenVault"),
+	}
+
+	resource, err := st.Get(id.Owner, id.Controller, id.Key)
+	if err != nil {
+		return false, fmt.Errorf("could not load storage capacity resource at %s: %w", id.String(), err)
+	}
+
+	return resource == nil, nil
 }
