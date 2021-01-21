@@ -102,7 +102,7 @@ func (r StorageReporter) isDapper(address flow.Address, st *state.State) (bool, 
 	if err != nil {
 		return false, fmt.Errorf("could not load resource at %s: %w", address, err)
 	}
-	return len(resource)==0, nil
+	return len(resource) != 0, nil
 }
 
 func (r StorageReporter) balance(address flow.Address, st *state.State) (balance uint64, hasBalance bool, err error) {
